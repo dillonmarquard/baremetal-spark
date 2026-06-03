@@ -1,0 +1,53 @@
+services:
+  spark-iceberg:
+    build: spark-docker/.
+    image: marq/spark
+    command: "tail -f /dev/null"
+    depends_on:
+      - seaweed-fs
+      - metastore-db
+    networks:
+      - spark_net
+    ports:
+      - 7077:7077 # master endpoint
+      - 8080:8080 # master ui
+      - 8081:8081 # worker ui
+      - 4040:4040 # job ui
+    volumes:
+      - ./spark-docker/conf:/opt/spark/conf
+
+  metastore-db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: spark
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: metastore
+    ports:
+      - "5432:5432" # db endpoint
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  seaweed-fs:
+    image: chrislusf/seaweedfs:latest
+    networks:
+      - spark_net
+    ports:
+      - 9333:9333 # master ui
+      - 23646:23646 # admin ui
+      - 8333:8333 # aws endpoint
+      - 8181:8181 # iceberg rest catalog
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=secret
+      - S3_BUCKET=general-bucket
+      - S3_TABLE_BUCKET=warehouse-bucket
+    volumes:
+      - seaweed_volume:/data
+
+volumes:
+  seaweed_volume:
+  postgres_data:
+
+networks:
+  spark_net:
