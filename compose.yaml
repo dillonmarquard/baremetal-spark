@@ -2,10 +2,11 @@ services:
   spark-iceberg:
     build: spark-docker/.
     image: marq/spark
+    container_name: spark-iceberg
     command: "tail -f /dev/null"
     depends_on:
       - seaweed-fs
-      - metastore-db
+      - metastore-service
     networks:
       - spark_net
     ports:
@@ -16,11 +17,31 @@ services:
     volumes:
       - ./spark-docker/conf:/opt/spark/conf
 
+  metastore-service:
+    build: hive-docker/.
+    image: marq/hive
+    container_name: metastore-serivce
+    depends_on:
+      - metastore-db
+    networks:
+        - spark_net
+    environment:
+      - SERVICE_NAME=metastore
+      - DB_DRIVER=postgres
+      - SERVICE_OPTS=-Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://metastore-db:5432/metastore -Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=password
+    ports:
+      - 9083:9083
+    volumes:
+      - metastore_data:/opt/hive/data/warehouse
+    
   metastore-db:
     image: postgres:latest
+    container_name: metastore-db
     restart: always
+    networks:
+      - spark_net
     environment:
-      POSTGRES_USER: spark
+      POSTGRES_USER: hive
       POSTGRES_PASSWORD: password
       POSTGRES_DB: metastore
     ports:
@@ -30,6 +51,7 @@ services:
 
   seaweed-fs:
     image: chrislusf/seaweedfs:latest
+    container_name: seaweed-fs
     networks:
       - spark_net
     ports:
@@ -48,6 +70,7 @@ services:
 volumes:
   seaweed_volume:
   postgres_data:
+  metastore_data:
 
 networks:
   spark_net:
