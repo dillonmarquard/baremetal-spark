@@ -1,0 +1,26 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+  implementation 'org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0'
+  implementation 'org.apache.iceberg:iceberg-aws-bundle:1.11.0'
+  implementation 'org.postgresql:postgresql:42.7.11'
+}
+
+tasks.register('downloadJars', Copy) {
+    into projectDir
+    
+    into ("hive-docker"){
+        from configurations.runtimeClasspath
+        include '**/postgres*.jar'
+    }
+    into ("spark-docker"){
+        from configurations.runtimeClasspath
+        include '**/iceberg-*.jar'
+    }
+}
